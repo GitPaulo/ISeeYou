@@ -1,0 +1,10 @@
+{
+  "Author": "GitPaulo",
+  "Name": "ISeeYou",
+  "Punchline": "Let's you see who's targeting/has targeted you through nameplate",
+  "Description": "A plugin that keeps track of player targets and displays the status by altering player's nameplates.",
+  "ApplicableVersion": "any",
+  "Tags": [
+    "plugin"
+  ]
+}

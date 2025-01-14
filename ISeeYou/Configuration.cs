@@ -1,8 +1,7 @@
 ﻿using Dalamud.Configuration;
-using Dalamud.Plugin;
 using System;
 
-namespace SamplePlugin;
+namespace ISeeYou;
 
 [Serializable]
 public class Configuration : IPluginConfiguration
@@ -11,10 +10,12 @@ public class Configuration : IPluginConfiguration
 
     public bool IsConfigWindowMovable { get; set; } = true;
     public bool SomePropertyToBeSavedAndWithADefault { get; set; } = true;
+    
+    public int PollFrequency { get; set; } = 100;
+    public int MaxHistoryEntries = 100;
 
-    // the below exist just to make saving less cumbersome
     public void Save()
     {
-        Plugin.PluginInterface.SavePluginConfig(this);
+        Shared.PluginInterface.SavePluginConfig(this);
     }
 }
