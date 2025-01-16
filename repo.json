@@ -1,0 +1,26 @@
+[
+    {
+        "Author": "GitPaulo",
+        "Name": "ISeeYou",
+        "Description": "Allows you to keep track of who is targeting you in a more visual way.",
+        "InternalName": "ISeeYou",
+        "AssemblyVersion": "0.0.0",
+        "RepoUrl": "https://github.com/GitPaulo/CombatHeadgear",
+        "IconUrl": "https://raw.githubusercontent.com/GitPaulo/CombatHeadgear/master/Data/icon.png",
+        "ApplicableVersion": "any",
+        "Tags": [
+            "dalamud",
+            "iseeyou",
+            "visibility",
+            "combat",
+            "GitPaulo",
+            "artin"
+        ],
+        "DalamudApiLevel": 11,
+        "IsHide": "False",
+        "IsTestingExclusive": "False",
+        "DownloadLinkInstall": "https://github.com/GitPaulo/CombatHeadgear/releases/download/0.0.0/latest.zip",
+        "DownloadLinkTesting": "https://github.com/GitPaulo/CombatHeadgear/releases/download/0.0.0/latest.zip",
+        "DownloadLinkUpdate": "https://github.com/GitPaulo/CombatHeadgear/releases/download/0.0.0/latest.zip"
+    }
+]

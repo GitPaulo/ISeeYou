@@ -10,25 +10,30 @@ using Dalamud.Plugin.Services;
 
 public class TargetManager : IDisposable
 {
-    private readonly Stopwatch updateTimer = new();
     private IPlayerCharacter[] currentTargetingPlayers = Array.Empty<IPlayerCharacter>();
+    
     private readonly List<IPlayerCharacter> targetHistory = new();
-
+    private readonly Stopwatch updateTimer = new();
+    
     public IReadOnlyCollection<IPlayerCharacter> CurrentTargetingPlayers => currentTargetingPlayers;
     public IReadOnlyCollection<IPlayerCharacter> TargetHistory => targetHistory;
+    public void ClearTargetHistory() => targetHistory.Clear();
 
     public TargetManager()
     {
-        updateTimer.Start();
-        Shared.Framework.Update += OnFrameworkUpdate;
+        InitUpdateTimer();
     }
-
+    
     public void Dispose()
     {
         Shared.Framework.Update -= OnFrameworkUpdate;
     }
-
-    public void ClearTargetHistory() => targetHistory.Clear();
+    
+    private void InitUpdateTimer()
+    {
+        updateTimer.Start();
+        Shared.Framework.Update += OnFrameworkUpdate;
+    }
 
     private void OnFrameworkUpdate(IFramework framework)
     {
@@ -63,28 +68,38 @@ public class TargetManager : IDisposable
 
     private void LogTargetingChanges(IPlayerCharacter[] newlyTargetingPlayers)
     {
-        var stoppedTargeting = currentTargetingPlayers.Except(newlyTargetingPlayers, new PlayerCharacterComparer());
-        var startedTargeting = newlyTargetingPlayers.Except(currentTargetingPlayers, new PlayerCharacterComparer());
+        var stoppedTargeting = currentTargetingPlayers.Except(newlyTargetingPlayers, new PlayerCharacterComparer()).ToList();
+        var startedTargeting = newlyTargetingPlayers.Except(currentTargetingPlayers, new PlayerCharacterComparer()).ToList();
 
-        foreach (var player in startedTargeting)
+        if (startedTargeting.Count != 0)
         {
-            Shared.Log.Information($"Started targeting: {player.Name}");
+            var names = string.Join(", ", startedTargeting.Select(player => player.Name));
+            var message = startedTargeting.Count == 1
+                              ? $"{names} is targeting you."
+                              : $"{names} are targeting you.";
+            Shared.Chat.Print(message);
         }
 
-        foreach (var player in stoppedTargeting)
+        if (stoppedTargeting.Count != 0)
         {
-            Shared.Log.Information($"Stopped targeting: {player.Name}");
+            var names = string.Join(", ", stoppedTargeting.Select(player => player.Name));
+            var message = stoppedTargeting.Count == 1
+                              ? $"{names} stopped targeting you."
+                              : $"{names} have stopped targeting you.";
+            Shared.Chat.Print(message);
         }
     }
-
+    
     private void UpdateTargetHistory(IPlayerCharacter[] newlyTargetingPlayers)
     {
         foreach (var player in newlyTargetingPlayers)
         {
             targetHistory.RemoveAll(t => t.GameObjectId == player.GameObjectId);
             targetHistory.Insert(0, player);
+            Shared.Log.Debug($"Inserted {player.Name.TextValue} into target history.");
         }
-
+        
+        // Maintain history size
         while (targetHistory.Count > Shared.Config.MaxHistoryEntries)
             targetHistory.RemoveAt(targetHistory.Count - 1);
     }
