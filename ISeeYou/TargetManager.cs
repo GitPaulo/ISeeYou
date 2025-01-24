@@ -12,11 +12,11 @@ public class TargetManager : IDisposable
 {
     private IPlayerCharacter[] currentTargetingPlayers = Array.Empty<IPlayerCharacter>();
     
-    private readonly List<IPlayerCharacter> targetHistory = new();
+    private readonly List<(ulong GameObjectId, string Name, DateTime Timestamp)> targetHistory = new();
     private readonly Stopwatch updateTimer = new();
     
     public IReadOnlyCollection<IPlayerCharacter> CurrentTargetingPlayers => currentTargetingPlayers;
-    public IReadOnlyCollection<IPlayerCharacter> TargetHistory => targetHistory;
+    public IReadOnlyCollection<(ulong GameObjectId, string Name, DateTime Timestamp)> TargetHistory => targetHistory;
     public void ClearTargetHistory() => targetHistory.Clear();
 
     public TargetManager()
@@ -78,6 +78,7 @@ public class TargetManager : IDisposable
                               ? $"{names} is targeting you."
                               : $"{names} are targeting you.";
             Shared.Chat.Print(message);
+            Shared.Sound.PlaySound(Shared.SoundTargetStartPath);
         }
 
         if (stoppedTargeting.Count != 0)
@@ -87,18 +88,21 @@ public class TargetManager : IDisposable
                               ? $"{names} stopped targeting you."
                               : $"{names} have stopped targeting you.";
             Shared.Chat.Print(message);
+            Shared.Sound.PlaySound(Shared.SoundTargetStopPath);
         }
     }
     
     private void UpdateTargetHistory(IPlayerCharacter[] newlyTargetingPlayers)
     {
-        foreach (var player in newlyTargetingPlayers)
+        foreach (IPlayerCharacter player in newlyTargetingPlayers)
         {
+            // Use immutable data: GameObjectId and Name
             targetHistory.RemoveAll(t => t.GameObjectId == player.GameObjectId);
-            targetHistory.Insert(0, player);
-            Shared.Log.Debug($"Inserted {player.Name.TextValue} into target history.");
+
+            targetHistory.Insert(0, (player.GameObjectId, player.Name.TextValue, DateTime.Now));
+            Shared.Log.Debug($"Inserted {player.Name.TextValue} into target history with timestamp {DateTime.Now:HH:mm}.");
         }
-        
+
         // Maintain history size
         while (targetHistory.Count > Shared.Config.MaxHistoryEntries)
             targetHistory.RemoveAt(targetHistory.Count - 1);

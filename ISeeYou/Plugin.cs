@@ -1,9 +1,11 @@
 ﻿using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using Dalamud.Game.Command;
 using Dalamud.Game.Gui.NamePlate;
 using Dalamud.Plugin;
 using Dalamud.Interface.Windowing;
+using ISeeYou.Sound;
 using ISeeYou.Windows;
 
 namespace ISeeYou;
@@ -12,7 +14,7 @@ public sealed class Plugin : IDalamudPlugin
 {
     private const string Name = "ISeeYou";
     private const string CommandName = "/icu";
-    private const string CommandNameClear = "/icu";
+    private const string CommandNameClear = "/icuc";
 
     private readonly WindowSystem windowSystem = new(Name);
 
@@ -24,6 +26,8 @@ public sealed class Plugin : IDalamudPlugin
 
         InitWindows();
         InitCommands();
+        InitResources();
+        InitServices();
         InitHooks();
 
         Shared.Log.Information($"Loaded {Shared.PluginInterface.Manifest.Name}");
@@ -32,16 +36,17 @@ public sealed class Plugin : IDalamudPlugin
     private void InitWindows()
     {
         Shared.ConfigWindow = new ConfigWindow();
-        Shared.TargetManager = new TargetManager();
+        Shared.HistoryWindow = new HistoryWindow();
 
         windowSystem.AddWindow(Shared.ConfigWindow);
+        windowSystem.AddWindow(Shared.HistoryWindow);
     }
 
     private void InitCommands()
     {
         Shared.CommandManager.AddHandler(CommandName, new CommandInfo(OnCommand)
         {
-            HelpMessage = "Use /icu to toggle the main window or /icu debug to test TargetManager"
+            HelpMessage = "Use /icu to print target history and use main window"
         });
         
         Shared.CommandManager.AddHandler(CommandNameClear, new CommandInfo(OnCommandClear)
@@ -50,6 +55,20 @@ public sealed class Plugin : IDalamudPlugin
         });
     }
 
+    private void InitResources()
+    { 
+        var assemblyDirectory = Shared.PluginInterface.AssemblyLocation.Directory?.FullName!;
+        
+        Shared.SoundTargetStartPath = Path.Combine(assemblyDirectory, "target_start.mp3");
+        Shared.SoundTargetStopPath = Path.Combine(assemblyDirectory, "target_stop.mp3");
+    }
+    
+    private void InitServices()
+    {
+        Shared.TargetManager = new TargetManager();
+        Shared.Sound = new SoundEngine();
+    }
+    
     private void InitHooks()
     {
         Shared.PluginInterface.UiBuilder.Draw += DrawUI;
@@ -73,6 +92,8 @@ public sealed class Plugin : IDalamudPlugin
     private void OnCommand(string command, string args)
     {
         ChatPrintTargetHistory();
+        Shared.Log.Debug("Toggling main window");
+        ToggleHistoryUI();       
     }
     
     private void OnCommandClear(string command, string args)
@@ -104,9 +125,9 @@ public sealed class Plugin : IDalamudPlugin
         if (targetHistory.Count > 0)
         {
             Shared.Chat.Print("Target History:");
-            foreach (var player in targetHistory)
-            { 
-                Shared.Chat.Print($"- {player.Name}");
+            foreach (var (gameObjectId, name, timestamp) in targetHistory)
+            {
+                Shared.Chat.Print($"- {name} (ID: {gameObjectId}) at {timestamp:HH:mm}");
             }
         }
         else
@@ -141,4 +162,5 @@ public sealed class Plugin : IDalamudPlugin
 
     private void DrawUI() => windowSystem.Draw();
     public void ToggleConfigUI() => Shared.ConfigWindow.Toggle();
+    public void ToggleHistoryUI() => Shared.HistoryWindow.Toggle();
 }
