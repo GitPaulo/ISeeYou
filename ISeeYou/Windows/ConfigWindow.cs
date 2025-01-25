@@ -7,15 +7,12 @@ namespace ISeeYou.Windows;
 
 public class ConfigWindow : Window, IDisposable
 {
-    // We give this window a constant ID using ###
-    // This allows for labels being dynamic, like "{FPS Counter}fps###XYZ counter window",
-    // and the window ID will always be "###XYZ counter window" for ImGui
-    public ConfigWindow() : base("A Wonderful Configuration Window###With a constant ID")
+    public ConfigWindow() : base("ISeeYou Configuration###ConfigWindow")
     {
         Flags = ImGuiWindowFlags.NoResize | ImGuiWindowFlags.NoCollapse | ImGuiWindowFlags.NoScrollbar |
                 ImGuiWindowFlags.NoScrollWithMouse;
 
-        Size = new Vector2(232, 90);
+        Size = new Vector2(340, 240);
         SizeCondition = ImGuiCond.Always;
     }
 
@@ -23,7 +20,7 @@ public class ConfigWindow : Window, IDisposable
 
     public override void PreDraw()
     {
-        // Flags must be added or removed before Draw() is being called, or they won't apply
+        // Toggle movability based on configuration
         if (Shared.Config.IsConfigWindowMovable)
         {
             Flags &= ~ImGuiWindowFlags.NoMove;
@@ -36,20 +33,54 @@ public class ConfigWindow : Window, IDisposable
 
     public override void Draw()
     {
-        // can't ref a property, so use a local copy
-        var configValue = Shared.Config.SomePropertyToBeSavedAndWithADefault;
-        if (ImGui.Checkbox("Random Config Bool", ref configValue))
-        {
-            Shared.Config.SomePropertyToBeSavedAndWithADefault = configValue;
-            // can save immediately on change, if you don't want to provide a "Save and Close" button
-            Shared.Config.Save();
-        }
-
+        // Checkbox for window movability
         var movable = Shared.Config.IsConfigWindowMovable;
-        if (ImGui.Checkbox("Movable Config Window", ref movable))
+        if (ImGui.Checkbox("Movable config window", ref movable))
         {
             Shared.Config.IsConfigWindowMovable = movable;
             Shared.Config.Save();
         }
+        
+        // Should play sound on target
+        var configValue = Shared.Config.ShouldPlaySoundOnTarget;
+        if (ImGui.Checkbox("Play sound on target", ref configValue))
+        {
+            Shared.Config.ShouldPlaySoundOnTarget = configValue;
+            Shared.Config.Save();
+        }
+        
+        // Should log to chat
+        var shouldLogToChat = Shared.Config.ShouldLogToChat;
+        if (ImGui.Checkbox("Log to chat", ref shouldLogToChat))
+        {
+            Shared.Config.ShouldLogToChat = shouldLogToChat;
+            Shared.Config.Save();
+        }
+
+        // Color picker for LocalPlayerColor
+        var localPlayerColor = Shared.Config.LocalPlayerColor;
+        if (ImGui.ColorEdit4("Local player color", ref localPlayerColor, ImGuiColorEditFlags.NoInputs))
+        {
+            Shared.Config.LocalPlayerColor = localPlayerColor;
+            Shared.Config.Save();
+        }
+        ImGui.Text("*Registered players are randomly colored.");
+        
+        // Max history entries
+        var maxHistoryEntries = Shared.Config.MaxHistoryEntries;
+        if (ImGui.InputInt("Max history", ref maxHistoryEntries))
+        {
+            Shared.Config.MaxHistoryEntries = maxHistoryEntries;
+            Shared.Config.Save();
+        }
+        
+        // Poll frequency
+        var pollFrequency = Shared.Config.PollFrequency;
+        if (ImGui.InputInt("Poll frequency", ref pollFrequency))
+        {
+            Shared.Config.PollFrequency = pollFrequency;
+            Shared.Config.Save();
+        }
+
     }
 }

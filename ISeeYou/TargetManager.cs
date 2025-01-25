@@ -1,4 +1,6 @@
-﻿namespace ISeeYou;
+﻿using System.Numerics;
+
+namespace ISeeYou;
 
 using System;
 using System.Collections.Generic;
@@ -10,25 +12,20 @@ using Dalamud.Plugin.Services;
 
 public class TargetManager : IDisposable
 {
-    private IPlayerCharacter[] currentTargetingPlayers = Array.Empty<IPlayerCharacter>();
-    
-    private readonly List<(ulong GameObjectId, string Name, DateTime Timestamp)> targetHistory = new();
+    private readonly Dictionary<ulong, TrackedPlayer> trackedPlayers = new();
+    private readonly Dictionary<ulong, Vector4> playerColors = new();
     private readonly Stopwatch updateTimer = new();
-    
-    public IReadOnlyCollection<IPlayerCharacter> CurrentTargetingPlayers => currentTargetingPlayers;
-    public IReadOnlyCollection<(ulong GameObjectId, string Name, DateTime Timestamp)> TargetHistory => targetHistory;
-    public void ClearTargetHistory() => targetHistory.Clear();
 
     public TargetManager()
     {
         InitUpdateTimer();
     }
-    
+
     public void Dispose()
     {
         Shared.Framework.Update -= OnFrameworkUpdate;
     }
-    
+
     private void InitUpdateTimer()
     {
         updateTimer.Start();
@@ -41,77 +38,175 @@ public class TargetManager : IDisposable
             return;
 
         updateTimer.Restart();
-        UpdateTargetingPlayers();
+        UpdateAllTrackedPlayers();
     }
 
-    private void UpdateTargetingPlayers()
+    public void RegisterPlayer(ulong playerId, string playerName, Vector4? colorOverride = null)
     {
-        var localPlayer = Shared.ClientState.LocalPlayer;
-        if (localPlayer == null)
-            return;
-
-        var newlyTargetingPlayers = GetPlayersTargetingLocalPlayer(Shared.ObjectTable, localPlayer);
-
-        LogTargetingChanges(newlyTargetingPlayers);
-        UpdateTargetHistory(newlyTargetingPlayers);
-
-        currentTargetingPlayers = newlyTargetingPlayers;
-    }
-
-    private IPlayerCharacter[] GetPlayersTargetingLocalPlayer(IEnumerable<IGameObject> objects, IGameObject localPlayer)
-    {
-        return objects
-            .OfType<IPlayerCharacter>()
-            .Where(obj => obj.TargetObjectId == localPlayer.GameObjectId)
-            .ToArray();
-    }
-
-    private void LogTargetingChanges(IPlayerCharacter[] newlyTargetingPlayers)
-    {
-        var stoppedTargeting = currentTargetingPlayers.Except(newlyTargetingPlayers, new PlayerCharacterComparer()).ToList();
-        var startedTargeting = newlyTargetingPlayers.Except(currentTargetingPlayers, new PlayerCharacterComparer()).ToList();
-
-        if (startedTargeting.Count != 0)
+        if (!trackedPlayers.ContainsKey(playerId))
         {
-            var names = string.Join(", ", startedTargeting.Select(player => player.Name));
-            var message = startedTargeting.Count == 1
-                              ? $"{names} is targeting you."
-                              : $"{names} are targeting you.";
-            Shared.Chat.Print(message);
-            Shared.Sound.PlaySound(Shared.SoundTargetStartPath);
-        }
+            trackedPlayers[playerId] = new TrackedPlayer(playerId, playerName);
 
-        if (stoppedTargeting.Count != 0)
-        {
-            var names = string.Join(", ", stoppedTargeting.Select(player => player.Name));
-            var message = stoppedTargeting.Count == 1
-                              ? $"{names} stopped targeting you."
-                              : $"{names} have stopped targeting you.";
-            Shared.Chat.Print(message);
-            Shared.Sound.PlaySound(Shared.SoundTargetStopPath);
+            // Use the provided color override or generate a bright color
+            playerColors[playerId] = colorOverride ?? GenerateBrightColor();
+
+            Shared.Log.Debug($"Registered player {playerName} (ID: {playerId}) with color {playerColors[playerId]}.");
+            
+            if (Shared.Config.ShouldLogToChat) {
+                Shared.Chat.Print($"Registered player {playerName} (ID: {playerId}) with color {playerColors[playerId]}.");
+            }
         }
     }
-    
-    private void UpdateTargetHistory(IPlayerCharacter[] newlyTargetingPlayers)
+
+    public void UnregisterPlayer(ulong playerId)
     {
-        foreach (IPlayerCharacter player in newlyTargetingPlayers)
+        if (trackedPlayers.Remove(playerId))
         {
-            // Use immutable data: GameObjectId and Name
-            targetHistory.RemoveAll(t => t.GameObjectId == player.GameObjectId);
+            playerColors.Remove(playerId); // Remove associated color
+            Shared.Log.Debug($"Unregistered player (ID: {playerId}) from tracking.");
 
-            targetHistory.Insert(0, (player.GameObjectId, player.Name.TextValue, DateTime.Now));
-            Shared.Log.Debug($"Inserted {player.Name.TextValue} into target history with timestamp {DateTime.Now:HH:mm}.");
+            if (Shared.Config.ShouldLogToChat)
+            {
+                Shared.Chat.Print($"Unregistered player (ID: {playerId}) from tracking.");
+            }
         }
-
-        // Maintain history size
-        while (targetHistory.Count > Shared.Config.MaxHistoryEntries)
-            targetHistory.RemoveAt(targetHistory.Count - 1);
     }
 
-    private class PlayerCharacterComparer : IEqualityComparer<IPlayerCharacter>
+    public void UpdatePlayerColor(ulong playerId, Vector4 color)
     {
-        public bool Equals(IPlayerCharacter? x, IPlayerCharacter? y) => x?.GameObjectId == y?.GameObjectId;
+        if (playerColors.ContainsKey(playerId))
+        {
+            playerColors[playerId] = color;
+            Shared.Log.Debug($"Updated color for player (ID: {playerId}) to {color}.");
+        }
+    }
 
-        public int GetHashCode(IPlayerCharacter obj) => obj.GameObjectId.GetHashCode();
+    public IReadOnlyDictionary<ulong, Vector4> GetPlayerColors() => playerColors; // Expose colors publicly
+
+    private Vector4 GenerateBrightColor()
+    {
+        // Generate a random bright color
+        var random = new Random();
+        float r = random.Next(128, 256) / 255f; // Scale to 0.0 - 1.0 for Vector4
+        float g = random.Next(128, 256) / 255f;
+        float b = random.Next(128, 256) / 255f;
+        float a = 1.0f; // Full opacity
+
+        return new Vector4(r, g, b, a);
+    }
+
+    public IReadOnlyCollection<(ulong PlayerId, TrackedPlayer History)> GetAllHistories()
+    {
+        return trackedPlayers.Select(kv => (kv.Key, kv.Value)).ToList();
+    }
+
+    private void UpdateAllTrackedPlayers()
+    {
+        var objects = Shared.ObjectTable.ToArray();
+        foreach (var player in trackedPlayers.Values)
+        {
+            player.Update(objects);
+        }
+    }
+
+    public class TrackedPlayer(ulong playerId, string playerName)
+    {
+        public ulong PlayerId { get; } = playerId;
+        public string PlayerName { get; } = playerName;
+
+        public IReadOnlyCollection<IPlayerCharacter> CurrentTargetingPlayers => currentTargetingPlayers;
+
+        public IReadOnlyCollection<(ulong GameObjectId, string Name, DateTime Timestamp)> TargetHistory =>
+            targetHistory;
+
+        private IPlayerCharacter[] currentTargetingPlayers = Array.Empty<IPlayerCharacter>();
+        private IPlayerCharacter[] previousTargetingPlayers = Array.Empty<IPlayerCharacter>(); // Track previous state
+        private readonly List<(ulong GameObjectId, string Name, DateTime Timestamp)> targetHistory = new();
+
+        public void Update(IEnumerable<IGameObject> objects)
+        {
+            var registeredPlayer =
+                Shared.ObjectTable.FirstOrDefault(obj => obj.GameObjectId == PlayerId) as IPlayerCharacter;
+            Shared.Log.Debug($"[{PlayerName}] Registered player: {registeredPlayer?.Name.TextValue ?? "null"}.");
+            if (registeredPlayer == null) return;
+
+            var newlyTargetingPlayers = objects
+                                        .OfType<IPlayerCharacter>()
+                                        .Where(obj => obj.TargetObjectId == registeredPlayer.GameObjectId)
+                                        .ToArray();
+
+            Shared.Log.Debug(
+                $"Newly targeting players: {string.Join(", ", newlyTargetingPlayers.Select(p => p.Name.TextValue))}.");
+
+            UpdateTargetHistory(newlyTargetingPlayers);
+            previousTargetingPlayers = currentTargetingPlayers;
+            currentTargetingPlayers = newlyTargetingPlayers;
+        }
+
+
+        private void UpdateTargetHistory(IPlayerCharacter[] newlyTargetingPlayers)
+        {
+            // Players who have started targeting
+            var startedTargeting = newlyTargetingPlayers
+                                   .Where(newPlayer =>
+                                              previousTargetingPlayers.All(
+                                                  prevPlayer => prevPlayer.GameObjectId != newPlayer.GameObjectId))
+                                   .ToList();
+
+            // Players who have stopped targeting
+            var stoppedTargeting = previousTargetingPlayers
+                                   .Where(prevPlayer =>
+                                              newlyTargetingPlayers.All(
+                                                  newPlayer => newPlayer.GameObjectId != prevPlayer.GameObjectId))
+                                   .ToList();
+
+            // Log players who have started targeting
+            foreach (var player in startedTargeting)
+            {
+                targetHistory.Insert(0, (player.GameObjectId, player.Name.TextValue, DateTime.Now));
+
+                if (Shared.Config.ShouldPlaySoundOnTarget)
+                {
+                    if (player.GameObjectId == Shared.ClientState.LocalPlayer!.GameObjectId)
+                    {
+                        Shared.Sound.PlaySound(Shared.SoundTargetStartPath);
+                    }
+                }
+
+                if (Shared.Config.ShouldLogToChat)
+                {
+                    Shared.Chat.Print($"{player.Name.TextValue} started targeting at {DateTime.Now:HH:mm}.");
+                }
+            }
+
+            // Log players who have stopped targeting
+            foreach (var player in stoppedTargeting)
+            {
+                if (Shared.Config.ShouldPlaySoundOnTarget)
+                {
+                    if (player.GameObjectId == Shared.ClientState.LocalPlayer!.GameObjectId)
+                    {
+                        Shared.Sound.PlaySound(Shared.SoundTargetStopPath);
+                    }
+                }
+
+                if (Shared.Config.ShouldLogToChat)
+                {
+                    Shared.Chat.Print($"{player.Name.TextValue} stopped targeting at {DateTime.Now:HH:mm}.");
+                }
+            }
+
+            // Maintain history size
+            while (targetHistory.Count > Shared.Config.MaxHistoryEntries)
+            {
+                targetHistory.RemoveAt(targetHistory.Count - 1);
+            }
+        }
+
+        public void ClearTargetHistory()
+        {
+            targetHistory.Clear();
+            Shared.Log.Debug($"Cleared target history for {PlayerName} (ID: {PlayerId}).");
+        }
     }
 }

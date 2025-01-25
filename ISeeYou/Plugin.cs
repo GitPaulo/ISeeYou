@@ -1,10 +1,11 @@
 ﻿using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using Dalamud.Game.Command;
 using Dalamud.Game.Gui.NamePlate;
 using Dalamud.Plugin;
 using Dalamud.Interface.Windowing;
+using ImGuiNET;
+using ISeeYou.ContextMenus;
 using ISeeYou.Sound;
 using ISeeYou.Windows;
 
@@ -16,6 +17,7 @@ public sealed class Plugin : IDalamudPlugin
     private const string CommandName = "/icu";
     private const string CommandNameClear = "/icuc";
 
+    private TargetContextMenu targetContextMenu = null!;
     private readonly WindowSystem windowSystem = new(Name);
 
     public Plugin(IDalamudPluginInterface pluginInterface)
@@ -25,6 +27,7 @@ public sealed class Plugin : IDalamudPlugin
         Shared.Config = pluginInterface.GetPluginConfig() as Configuration ?? new Configuration();
 
         InitWindows();
+        InitContextMenu();
         InitCommands();
         InitResources();
         InitServices();
@@ -42,13 +45,19 @@ public sealed class Plugin : IDalamudPlugin
         windowSystem.AddWindow(Shared.HistoryWindow);
     }
 
+    private void InitContextMenu()
+    {
+        targetContextMenu = new TargetContextMenu();
+        targetContextMenu.Enable();
+    }
+
     private void InitCommands()
     {
         Shared.CommandManager.AddHandler(CommandName, new CommandInfo(OnCommand)
         {
             HelpMessage = "Use /icu to print target history and use main window"
         });
-        
+
         Shared.CommandManager.AddHandler(CommandNameClear, new CommandInfo(OnCommandClear)
         {
             HelpMessage = "Use /icuc to clear target history"
@@ -56,36 +65,46 @@ public sealed class Plugin : IDalamudPlugin
     }
 
     private void InitResources()
-    { 
+    {
         var assemblyDirectory = Shared.PluginInterface.AssemblyLocation.Directory?.FullName!;
-        
+
         Shared.SoundTargetStartPath = Path.Combine(assemblyDirectory, "target_start.mp3");
         Shared.SoundTargetStopPath = Path.Combine(assemblyDirectory, "target_stop.mp3");
     }
-    
+
     private void InitServices()
     {
         Shared.TargetManager = new TargetManager();
         Shared.Sound = new SoundEngine();
+
+        // Register the local player for tracking
+        var localPlayer = Shared.ClientState.LocalPlayer;
+        if (localPlayer != null)
+        {
+            Shared.TargetManager.RegisterPlayer(localPlayer.GameObjectId, localPlayer.Name.TextValue,
+                                                Shared.Config.LocalPlayerColor);
+        }
     }
-    
+
     private void InitHooks()
     {
         Shared.PluginInterface.UiBuilder.Draw += DrawUI;
         Shared.PluginInterface.UiBuilder.OpenConfigUi += ToggleConfigUI;
-        
+
         Shared.NamePlateGui.OnNamePlateUpdate += NamePlateGui_OnNamePlateUpdate;
     }
 
     public void Dispose()
     {
         windowSystem.RemoveAllWindows();
+        targetContextMenu.Disable();
 
         Shared.ConfigWindow.Dispose();
         Shared.TargetManager.Dispose();
 
         Shared.CommandManager.RemoveHandler(CommandName);
-        
+        Shared.CommandManager.RemoveHandler(CommandNameClear);
+
         Shared.NamePlateGui.OnNamePlateUpdate -= NamePlateGui_OnNamePlateUpdate;
     }
 
@@ -93,69 +112,88 @@ public sealed class Plugin : IDalamudPlugin
     {
         ChatPrintTargetHistory();
         Shared.Log.Debug("Toggling main window");
-        ToggleHistoryUI();       
+        ToggleHistoryUI();
     }
-    
+
     private void OnCommandClear(string command, string args)
     {
-        Shared.TargetManager.ClearTargetHistory();
-        Shared.Chat.Print("Target history cleared.");
+        var allHistories = Shared.TargetManager.GetAllHistories();
+
+        foreach (var (playerId, trackedPlayer) in allHistories)
+        {
+            trackedPlayer.ClearTargetHistory();
+            Shared.Chat.Print($"Cleared target history for {trackedPlayer.PlayerName} (ID: {playerId}).");
+        }
     }
 
     private void ChatPrintTargetHistory()
     {
-        var currentTargetingPlayers = Shared.TargetManager.CurrentTargetingPlayers;
-        var targetHistory = Shared.TargetManager.TargetHistory;
+        var allHistories = Shared.TargetManager.GetAllHistories();
 
-        // Log current targeters
-        if (currentTargetingPlayers.Count > 0)
+        // Log target history for each tracked player
+        if (allHistories.Count > 0)
         {
-            Shared.Chat.Print("Current Targeting Players:");
-            foreach (var player in currentTargetingPlayers)
+            foreach (var (playerId, trackedPlayer) in allHistories)
             {
-                Shared.Chat.Print($"- {player.Name}");
+                Shared.Chat.Print($"Target History for {trackedPlayer.PlayerName} (ID: {playerId}):");
+
+                if (trackedPlayer.TargetHistory.Count > 0)
+                {
+                    foreach (var (gameObjectId, name, timestamp) in trackedPlayer.TargetHistory)
+                    {
+                        Shared.Chat.Print($"- {name} (ID: {gameObjectId}) at {timestamp:HH:mm}");
+                    }
+                }
+                else
+                {
+                    Shared.Chat.Print("  No targets in history.");
+                }
             }
         }
         else
         {
-            Shared.Chat.Print("No players are currently targeting you.");
-        }
-
-        // Log target history
-        if (targetHistory.Count > 0)
-        {
-            Shared.Chat.Print("Target History:");
-            foreach (var (gameObjectId, name, timestamp) in targetHistory)
-            {
-                Shared.Chat.Print($"- {name} (ID: {gameObjectId}) at {timestamp:HH:mm}");
-            }
-        }
-        else
-        {
-            Shared.Chat.Print("No target history available.");
+            Shared.Chat.Print("No players are currently being tracked.");
         }
     }
-    
+
     private void NamePlateGui_OnNamePlateUpdate(
         INamePlateUpdateContext context, IReadOnlyList<INamePlateUpdateHandler> handlers)
     {
-        var currentTargetingPlayers = Shared.TargetManager.CurrentTargetingPlayers;
-        // Highlight nameplates of players targeting you
+        var trackedPlayers = Shared.TargetManager.GetAllHistories();
+        var playerColors = Shared.TargetManager.GetPlayerColors();
+
+        // TODO: Very innefficient, should be optimized
+        // Create a mapping of targeting players to registered players
+        var targetingToRegisteredMap = new Dictionary<ulong, ulong>();
+        foreach (var (registeredPlayerId, trackedPlayer) in trackedPlayers)
+        {
+            foreach (var targetingPlayer in trackedPlayer.CurrentTargetingPlayers)
+            {
+                targetingToRegisteredMap.TryAdd(targetingPlayer.GameObjectId, registeredPlayerId);
+            }
+        }
+
         foreach (var handler in handlers)
         {
-            // Skip non-player nameplates
-            if (handler.NamePlateKind != NamePlateKind.PlayerCharacter) continue;
-    
-            // Skip invalid player characters
-            var playerCharacter = handler.PlayerCharacter;
-            if (playerCharacter == null || !playerCharacter.IsValid()) continue;
+            if (handler.NamePlateKind != NamePlateKind.PlayerCharacter)
+                continue;
 
-            if (currentTargetingPlayers.Contains(playerCharacter))
+            var playerCharacter = handler.PlayerCharacter;
+            if (playerCharacter == null || !playerCharacter.IsValid())
+                continue;
+
+            // Check if this player is targeting a registered player
+            if (targetingToRegisteredMap.TryGetValue(playerCharacter.GameObjectId, out var registeredPlayerId))
             {
-                Shared.Log.Debug($"Highlighting nameplate for {playerCharacter.Name.TextValue}");
-                // uint yellow bright
-                handler.EdgeColor = 0xFFFF00FF;
-                handler.TextColor = 0xFFFF00FF;
+                // Retrieve the color associated with the registered player
+                if (playerColors.TryGetValue(registeredPlayerId, out var color))
+                {
+                    var colorUint = ImGui.ColorConvertFloat4ToU32(color);
+                    handler.EdgeColor = colorUint;
+                    handler.TextColor = colorUint;
+
+                    Shared.Log.Debug($"Highlighting {playerCharacter.Name.TextValue} with color {color}.");
+                }
             }
         }
     }

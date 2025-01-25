@@ -1,4 +1,5 @@
-﻿using Dalamud.IoC;
+﻿using Dalamud.Game.ClientState.Objects;
+using Dalamud.IoC;
 using Dalamud.Plugin;
 using Dalamud.Plugin.Services;
 using ISeeYou.Sound;
@@ -25,4 +26,6 @@ internal class Shared
     [PluginService] internal static IObjectTable ObjectTable { get; private set; } = null!;
     [PluginService] internal static IChatGui Chat { get; private set; } = null!;
     [PluginService] internal static INamePlateGui NamePlateGui { get; private set; } = null!;
+    [PluginService] internal static IContextMenu ContextMenu { get; private set; } = null!;
+    [PluginService] public static ITargetManager ClientTargetManager { get; private set; }
 }
