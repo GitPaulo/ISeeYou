@@ -13,21 +13,18 @@ namespace ISeeYou.ContextMenus
 
         public TargetContextMenu()
         {
-            // Initialize the "Register Player" menu item
             registerPlayerMenuItem = new MenuItem
             {
                 Name = "Register Player",
                 OnClicked = OnRegisterPlayerClicked
             };
 
-            // Initialize the "Unregister Player" menu item
             unregisterPlayerMenuItem = new MenuItem
             {
                 Name = "Unregister Player",
                 OnClicked = OnUnregisterPlayerClicked
             };
 
-            // Initialize the parent menu item "Track Targeting" with child items
             trackTargetingParentMenuItem = new MenuItem
             {
                 Name = "Track Targeting",
@@ -48,15 +45,12 @@ namespace ISeeYou.ContextMenus
 
         private void OnContextMenuOpened(IMenuOpenedArgs menuArgs)
         {
-            // Ensure the context menu is for a player
             if (menuArgs.Target is not MenuTargetDefault menuTargetDefault)
                 return;
 
-            // Retrieve the target's full name and object ID
             targetFullName = menuTargetDefault.TargetName;
             targetObjectId = menuTargetDefault.TargetObjectId;
 
-            // Add the "Track Targeting" parent menu item with its children
             menuArgs.AddMenuItem(trackTargetingParentMenuItem);
         }
 
@@ -65,11 +59,7 @@ namespace ISeeYou.ContextMenus
             if (string.IsNullOrEmpty(targetFullName) || targetObjectId == null)
                 return;
 
-            // Register the player with the TargetManager
             Shared.TargetManager.RegisterPlayer((ulong)targetObjectId, targetFullName);
-
-            // Optional: Send feedback to the chat
-            Shared.Chat.Print($"Registered player: {targetFullName} (ID: {targetObjectId}).");
         }
 
         private void OnUnregisterPlayerClicked(IMenuItemClickedArgs args)
@@ -77,11 +67,7 @@ namespace ISeeYou.ContextMenus
             if (string.IsNullOrEmpty(targetFullName) || targetObjectId == null)
                 return;
 
-            // Unregister the player with the TargetManager
             Shared.TargetManager.UnregisterPlayer((ulong)targetObjectId);
-
-            // Optional: Send feedback to the chat
-            Shared.Chat.Print($"Unregistered player: {targetFullName} (ID: {targetObjectId}).");
         }
         
         private void OpenTrackTargetingSubmenu(IMenuItemClickedArgs args)

@@ -27,5 +27,5 @@ internal class Shared
     [PluginService] internal static IChatGui Chat { get; private set; } = null!;
     [PluginService] internal static INamePlateGui NamePlateGui { get; private set; } = null!;
     [PluginService] internal static IContextMenu ContextMenu { get; private set; } = null!;
-    [PluginService] public static ITargetManager ClientTargetManager { get; private set; }
+    [PluginService] public static ITargetManager ClientTargetManager { get; private set; } = null!;
 }

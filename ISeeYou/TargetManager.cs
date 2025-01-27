@@ -51,9 +51,11 @@ public class TargetManager : IDisposable
             playerColors[playerId] = colorOverride ?? GenerateBrightColor();
 
             Shared.Log.Debug($"Registered player {playerName} (ID: {playerId}) with color {playerColors[playerId]}.");
-            
-            if (Shared.Config.ShouldLogToChat) {
-                Shared.Chat.Print($"Registered player {playerName} (ID: {playerId}) with color {playerColors[playerId]}.");
+
+            if (Shared.Config.ShouldLogToChat)
+            {
+                Shared.Chat.Print(
+                    $"Registered player {playerName} (ID: {playerId}) with color {playerColors[playerId]}.");
             }
         }
     }
@@ -127,7 +129,6 @@ public class TargetManager : IDisposable
         {
             var registeredPlayer =
                 Shared.ObjectTable.FirstOrDefault(obj => obj.GameObjectId == PlayerId) as IPlayerCharacter;
-            Shared.Log.Debug($"[{PlayerName}] Registered player: {registeredPlayer?.Name.TextValue ?? "null"}.");
             if (registeredPlayer == null) return;
 
             var newlyTargetingPlayers = objects
@@ -135,14 +136,10 @@ public class TargetManager : IDisposable
                                         .Where(obj => obj.TargetObjectId == registeredPlayer.GameObjectId)
                                         .ToArray();
 
-            Shared.Log.Debug(
-                $"Newly targeting players: {string.Join(", ", newlyTargetingPlayers.Select(p => p.Name.TextValue))}.");
-
-            UpdateTargetHistory(newlyTargetingPlayers);
             previousTargetingPlayers = currentTargetingPlayers;
+            UpdateTargetHistory(newlyTargetingPlayers);
             currentTargetingPlayers = newlyTargetingPlayers;
         }
-
 
         private void UpdateTargetHistory(IPlayerCharacter[] newlyTargetingPlayers)
         {
@@ -190,6 +187,8 @@ public class TargetManager : IDisposable
                     }
                 }
 
+                // chat print stopped and started targeting
+                Shared.Log.Debug($"Stopped Targeting: {player.Name.TextValue} - {player.GameObjectId}");
                 if (Shared.Config.ShouldLogToChat)
                 {
                     Shared.Chat.Print($"{player.Name.TextValue} stopped targeting at {DateTime.Now:HH:mm}.");

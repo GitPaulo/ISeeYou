@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
+using Dalamud.Interface;
 using Dalamud.Interface.Windowing;
 using ImGuiNET;
 
@@ -9,7 +10,7 @@ namespace ISeeYou.Windows
 {
     public class HistoryWindow : Window, IDisposable
     {
-        private string selectedPlayer = null;
+        private string selectedPlayer = string.Empty;
         private int selectedRow = -1;
         private string filterText = string.Empty;
         private bool sortAscending = true;
@@ -37,9 +38,7 @@ namespace ISeeYou.Windows
             var allHistories = Shared.TargetManager.GetAllHistories();
             var playerColors = Shared.TargetManager.GetPlayerColors();
 
-            // 
-            // Side List
-            //
+            // Side List (Section A)
             ImGui.BeginChild("PlayerList", new Vector2(150, 0), true);
             ImGui.Text("Tracked Players:");
             ImGui.Separator();
@@ -57,15 +56,37 @@ namespace ISeeYou.Windows
                 ImGui.PopStyleColor();
             }
 
+            // Add some vertical spacing between the list and the button
+            ImGui.SetCursorPosY(ImGui.GetCursorPosY() + 5);
+
+            // Center the button horizontally
+            float buttonWidth = 140.0f; // Adjust the width as needed
+            float buttonX = (150 - buttonWidth) / 2.0f;
+            ImGui.SetCursorPosX(buttonX);
+
+            // Unregister button
+            if (ImGui.Button("Unregister Selected", new Vector2(buttonWidth, 0)))
+            {
+                if (selectedPlayer != string.Empty)
+                {
+                    var playerEntry = allHistories.FirstOrDefault(h => h.History.PlayerName == selectedPlayer);
+                    if (playerEntry.History != null)
+                    {
+                        Shared.TargetManager.UnregisterPlayer(playerEntry.PlayerId);
+                        selectedPlayer = allHistories.FirstOrDefault().History?.PlayerName ?? string.Empty;
+                    }
+                }
+            }
+
             ImGui.EndChild();
+
+            // Position the next item (Section B) on the same line
             ImGui.SameLine();
 
-            //
-            // History Table
-            //
-            ImGui.BeginChild("HistoryTableRegion");
+            // History Table (Section B)
+            ImGui.BeginChild("HistoryTableRegion", new Vector2(0, 0), false);
 
-            if (selectedPlayer != null)
+            if (selectedPlayer != string.Empty)
             {
                 var selectedHistory = allHistories.FirstOrDefault(h => h.History.PlayerName == selectedPlayer).History;
                 if (selectedHistory != null)
@@ -90,7 +111,7 @@ namespace ISeeYou.Windows
             // Filter input
             if (ImGui.InputText("Filter by Name", ref filterText, 100))
             {
-                // Optional: Perform actions when the filter text changes
+                // TODO: We could debounce this input
             }
 
             // Filter and sort the target history

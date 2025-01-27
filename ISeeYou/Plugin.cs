@@ -76,20 +76,15 @@ public sealed class Plugin : IDalamudPlugin
     {
         Shared.TargetManager = new TargetManager();
         Shared.Sound = new SoundEngine();
-
-        // Register the local player for tracking
-        var localPlayer = Shared.ClientState.LocalPlayer;
-        if (localPlayer != null)
-        {
-            Shared.TargetManager.RegisterPlayer(localPlayer.GameObjectId, localPlayer.Name.TextValue,
-                                                Shared.Config.LocalPlayerColor);
-        }
+        
+        RegisterLocalPlayer();
     }
 
     private void InitHooks()
     {
         Shared.PluginInterface.UiBuilder.Draw += DrawUI;
         Shared.PluginInterface.UiBuilder.OpenConfigUi += ToggleConfigUI;
+        Shared.ClientState.Login += OnLogin;
 
         Shared.NamePlateGui.OnNamePlateUpdate += NamePlateGui_OnNamePlateUpdate;
     }
@@ -106,8 +101,14 @@ public sealed class Plugin : IDalamudPlugin
         Shared.CommandManager.RemoveHandler(CommandNameClear);
 
         Shared.NamePlateGui.OnNamePlateUpdate -= NamePlateGui_OnNamePlateUpdate;
+        Shared.ClientState.Login -= OnLogin;
     }
 
+    private void OnLogin()
+    {
+        RegisterLocalPlayer();
+    }
+    
     private void OnCommand(string command, string args)
     {
         ChatPrintTargetHistory();
@@ -126,6 +127,18 @@ public sealed class Plugin : IDalamudPlugin
         }
     }
 
+    private void RegisterLocalPlayer()
+    {
+        // With the way the TargetManager is implemented, we need to register the local player
+        // Plugins can be reloaded, so we need to ensure the local player is registered on Login AND on reload
+        var localPlayer = Shared.ClientState.LocalPlayer;
+        if (localPlayer != null)
+        {
+            Shared.TargetManager.RegisterPlayer(localPlayer.GameObjectId, localPlayer.Name.TextValue,
+                                                Shared.Config.LocalPlayerColor);
+        }
+    }
+    
     private void ChatPrintTargetHistory()
     {
         var allHistories = Shared.TargetManager.GetAllHistories();
@@ -162,7 +175,7 @@ public sealed class Plugin : IDalamudPlugin
         var trackedPlayers = Shared.TargetManager.GetAllHistories();
         var playerColors = Shared.TargetManager.GetPlayerColors();
 
-        // TODO: Very innefficient, should be optimized
+        // TODO: Very inefficient, should be optimized
         // Create a mapping of targeting players to registered players
         var targetingToRegisteredMap = new Dictionary<ulong, ulong>();
         foreach (var (registeredPlayerId, trackedPlayer) in trackedPlayers)
