@@ -1,6 +1,6 @@
 # ISeeYou
 
-A Dalamud plugin that allows you to keep track of targets across registered players (youreself and friends!).
+A Dalamud plugin that allows you to keep track of targets across registered players (yourself and friends!).
 
 ![image](https://github.com/user-attachments/assets/b35dfdb3-dd92-434e-a154-605ce4e4babe)
 ![image](https://github.com/user-attachments/assets/0ae83ce9-ad78-44b8-8e09-b0055ce088f2)
