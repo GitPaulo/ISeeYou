@@ -164,10 +164,7 @@ public class TargetManager : IDisposable
 
                 if (Shared.Config.ShouldPlaySoundOnTarget)
                 {
-                    if (player.GameObjectId == Shared.ClientState.LocalPlayer!.GameObjectId)
-                    {
-                        Shared.Sound.PlaySound(Shared.SoundTargetStartPath);
-                    }
+                    Shared.Sound.PlaySound(Shared.SoundTargetStartPath);
                 }
 
                 if (Shared.Config.ShouldLogToChat)
@@ -181,10 +178,7 @@ public class TargetManager : IDisposable
             {
                 if (Shared.Config.ShouldPlaySoundOnTarget)
                 {
-                    if (player.GameObjectId == Shared.ClientState.LocalPlayer!.GameObjectId)
-                    {
-                        Shared.Sound.PlaySound(Shared.SoundTargetStopPath);
-                    }
+                    Shared.Sound.PlaySound(Shared.SoundTargetStopPath);
                 }
 
                 // chat print stopped and started targeting

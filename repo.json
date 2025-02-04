@@ -19,8 +19,8 @@
         "DalamudApiLevel": 11,
         "IsHide": "False",
         "IsTestingExclusive": "False",
-        "DownloadLinkInstall": "https://github.com/GitPaulo/ISeeYou/releases/download/0.0.0/latest.zip",
-        "DownloadLinkTesting": "https://github.com/GitPaulo/ISeeYou/releases/download/0.0.0/latest.zip",
-        "DownloadLinkUpdate": "https://github.com/GitPaulo/ISeeYou/releases/download/0.0.0/latest.zip"
+        "DownloadLinkInstall": "https://github.com/GitPaulo/ISeeYou/releases/download/1.0.0/latest.zip",
+        "DownloadLinkTesting": "https://github.com/GitPaulo/ISeeYou/releases/download/1.0.0/latest.zip",
+        "DownloadLinkUpdate": "https://github.com/GitPaulo/ISeeYou/releases/download/1.0.0/latest.zip"
     }
 ]

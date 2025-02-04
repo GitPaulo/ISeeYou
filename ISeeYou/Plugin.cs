@@ -83,6 +83,7 @@ public sealed class Plugin : IDalamudPlugin
     private void InitHooks()
     {
         Shared.PluginInterface.UiBuilder.Draw += DrawUI;
+        Shared.PluginInterface.UiBuilder.OpenMainUi += ToggleHistoryUI;
         Shared.PluginInterface.UiBuilder.OpenConfigUi += ToggleConfigUI;
         Shared.ClientState.Login += OnLogin;
 

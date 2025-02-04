@@ -16,24 +16,16 @@ namespace ISeeYou.Windows
         private bool sortAscending = true;
         private int sortColumn = -1;
 
-        public HistoryWindow() : base("Target History###With a constant ID")
+        public HistoryWindow() : base("ISeeYou Target History###With a constant ID")
         {
-            Flags = ImGuiWindowFlags.NoResize | ImGuiWindowFlags.NoCollapse | ImGuiWindowFlags.NoScrollbar |
-                    ImGuiWindowFlags.NoScrollWithMouse;
+            Flags = ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoScrollWithMouse;
             Size = new Vector2(500, 300);
             SizeCondition = ImGuiCond.Always;
         }
 
         public void Dispose() { }
 
-        public override void PreDraw()
-        {
-            Flags = Shared.Config.IsConfigWindowMovable
-                        ? Flags & ~ImGuiWindowFlags.NoMove
-                        : Flags | ImGuiWindowFlags.NoMove;
-        }
-
-        public override unsafe void Draw()
+        public override void Draw()
         {
             var allHistories = Shared.TargetManager.GetAllHistories();
             var playerColors = Shared.TargetManager.GetPlayerColors();

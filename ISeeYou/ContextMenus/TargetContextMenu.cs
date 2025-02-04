@@ -28,6 +28,7 @@ namespace ISeeYou.ContextMenus
             trackTargetingParentMenuItem = new MenuItem
             {
                 Name = "Track Targeting",
+                PrefixChar = 'T',
                 IsSubmenu = true,
                 OnClicked = OpenTrackTargetingSubmenu
             };
