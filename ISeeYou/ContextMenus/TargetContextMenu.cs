@@ -44,9 +44,42 @@ namespace ISeeYou.ContextMenus
             Shared.ContextMenu.OnMenuOpened -= OnContextMenuOpened;
         }
 
+        private static bool IsMenuValid(IMenuArgs menuOpenedArgs)
+        {
+            if (menuOpenedArgs.Target is not MenuTargetDefault menuTargetDefault)
+            {
+                return false;
+            }
+            
+            switch (menuOpenedArgs.AddonName)
+            {
+                case null: // Nameplate/Model menu
+                case "LookingForGroup":
+                case "PartyMemberList":
+                case "FriendList":
+                case "FreeCompany":
+                case "SocialList":
+                case "ContactList":
+                case "ChatLog":
+                case "_PartyList":
+                case "LinkShell":
+                case "CrossWorldLinkshell":
+                case "ContentMemberList": // Eureka/Bozja/...
+                case "BeginnerChatList":
+                    return menuTargetDefault.TargetName != string.Empty &&
+                           Util.IsWorldValid(menuTargetDefault.TargetHomeWorld.RowId);
+
+                case "BlackList":
+                case "MuteList":
+                    return menuTargetDefault.TargetName != string.Empty;
+            }
+
+            return false;
+        }
+
         private void OnContextMenuOpened(IMenuOpenedArgs menuArgs)
         {
-            if (menuArgs.Target is not MenuTargetDefault menuTargetDefault)
+            if (menuArgs.Target is not MenuTargetDefault menuTargetDefault || !IsMenuValid(menuArgs))
                 return;
 
             targetFullName = menuTargetDefault.TargetName;
@@ -70,13 +103,13 @@ namespace ISeeYou.ContextMenus
 
             Shared.TargetManager.UnregisterPlayer((ulong)targetObjectId);
         }
-        
+
         private void OpenTrackTargetingSubmenu(IMenuItemClickedArgs args)
         {
             var submenuItems = new List<MenuItem>();
             submenuItems.Add(registerPlayerMenuItem);
             submenuItems.Add(unregisterPlayerMenuItem);
-            
+
             args.OpenSubmenu(submenuItems);
         }
     }

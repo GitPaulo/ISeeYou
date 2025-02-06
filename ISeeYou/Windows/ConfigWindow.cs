@@ -17,11 +17,19 @@ public class ConfigWindow : Window, IDisposable
 
     public override void Draw()
     {
-        // Should play sound on target
-        var configValue = Shared.Config.ShouldPlaySoundOnTarget;
-        if (ImGui.Checkbox("Play sound on target", ref configValue))
+        // Is enabled in Combat
+        var isEnabledInCombat = Shared.Config.ShouldPlaySoundOnTarget;
+        if (ImGui.Checkbox("Enabled in combat", ref isEnabledInCombat))
         {
-            Shared.Config.ShouldPlaySoundOnTarget = configValue;
+            Shared.Config.ShouldPlaySoundOnTarget = isEnabledInCombat;
+            Shared.Config.Save();
+        }
+        
+        // Should play sound on target
+        var shouldPlaySoundOnTarget = Shared.Config.ShouldPlaySoundOnTarget;
+        if (ImGui.Checkbox("Play sound on target", ref shouldPlaySoundOnTarget))
+        {
+            Shared.Config.ShouldPlaySoundOnTarget = shouldPlaySoundOnTarget;
             Shared.Config.Save();
         }
 

@@ -8,7 +8,8 @@ namespace ISeeYou;
 public class Configuration : IPluginConfiguration
 {
     public int Version { get; set; } = 0;
-
+    
+    public bool IsEnabledInCombat { get; set; } = true;
     public bool ShouldPlaySoundOnTarget { get; set; } = true;
     public bool ShouldLogToChat { get; set; } = true;
     public Vector4 LocalPlayerColor { get; set; } = new(1, 1, 1, 1);

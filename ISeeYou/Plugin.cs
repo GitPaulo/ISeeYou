@@ -76,7 +76,7 @@ public sealed class Plugin : IDalamudPlugin
     {
         Shared.TargetManager = new TargetManager();
         Shared.Sound = new SoundEngine();
-        
+
         RegisterLocalPlayer();
     }
 
@@ -109,11 +109,9 @@ public sealed class Plugin : IDalamudPlugin
     {
         RegisterLocalPlayer();
     }
-    
+
     private void OnCommand(string command, string args)
     {
-        ChatPrintTargetHistory();
-        Shared.Log.Debug("Toggling main window");
         ToggleHistoryUI();
     }
 
@@ -139,40 +137,12 @@ public sealed class Plugin : IDalamudPlugin
                                                 Shared.Config.LocalPlayerColor);
         }
     }
-    
-    private void ChatPrintTargetHistory()
-    {
-        var allHistories = Shared.TargetManager.GetAllHistories();
-
-        // Log target history for each tracked player
-        if (allHistories.Count > 0)
-        {
-            foreach (var (playerId, trackedPlayer) in allHistories)
-            {
-                Shared.Chat.Print($"Target History for {trackedPlayer.PlayerName} (ID: {playerId}):");
-
-                if (trackedPlayer.TargetHistory.Count > 0)
-                {
-                    foreach (var (gameObjectId, name, timestamp) in trackedPlayer.TargetHistory)
-                    {
-                        Shared.Chat.Print($"- {name} (ID: {gameObjectId}) at {timestamp:HH:mm}");
-                    }
-                }
-                else
-                {
-                    Shared.Chat.Print("  No targets in history.");
-                }
-            }
-        }
-        else
-        {
-            Shared.Chat.Print("No players are currently being tracked.");
-        }
-    }
 
     private void NamePlateGui_OnNamePlateUpdate(
         INamePlateUpdateContext context, IReadOnlyList<INamePlateUpdateHandler> handlers)
     {
+        if (Util.IsLocalPlayerInCombat() && !Shared.Config.IsEnabledInCombat) return;
+
         var trackedPlayers = Shared.TargetManager.GetAllHistories();
         var playerColors = Shared.TargetManager.GetPlayerColors();
 

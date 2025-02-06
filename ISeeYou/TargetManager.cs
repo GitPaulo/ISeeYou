@@ -38,6 +38,10 @@ public class TargetManager : IDisposable
             return;
 
         updateTimer.Restart();
+        
+        if (Util.IsLocalPlayerInCombat() && !Shared.Config.IsEnabledInCombat)
+            return;
+        
         UpdateAllTrackedPlayers();
     }
 
@@ -169,7 +173,9 @@ public class TargetManager : IDisposable
 
                 if (Shared.Config.ShouldLogToChat)
                 {
-                    Shared.Chat.Print($"{player.Name.TextValue} started targeting at {DateTime.Now:HH:mm}.");
+                    Shared.Chat.Print($"{player.Name.TextValue} started targeting {
+                        (playerId == Shared.ClientState.LocalPlayer!.GameObjectId ? "YOU" : playerName)
+                    } at {DateTime.Now:HH:mm}.");
                 }
             }
 
@@ -185,7 +191,9 @@ public class TargetManager : IDisposable
                 Shared.Log.Debug($"Stopped Targeting: {player.Name.TextValue} - {player.GameObjectId}");
                 if (Shared.Config.ShouldLogToChat)
                 {
-                    Shared.Chat.Print($"{player.Name.TextValue} stopped targeting at {DateTime.Now:HH:mm}.");
+                    Shared.Chat.Print($"{player.Name.TextValue} stopped targeting {
+                        (playerId == Shared.ClientState.LocalPlayer!.GameObjectId ? "YOU" : playerName)
+                    } at {DateTime.Now:HH:mm}.");
                 }
             }
 
