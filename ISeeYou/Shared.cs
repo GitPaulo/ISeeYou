@@ -12,6 +12,7 @@ internal class Shared
     public static Configuration Config { get; set; } = null!;
     public static ConfigWindow ConfigWindow { get; set; } = null!;
     public static HistoryWindow HistoryWindow { get; set; } = null!;
+    public static RecentTargetsWindow MeWindow { get; set; } = null!;
     public static TargetManager TargetManager { get; set; } = null!;
     public static SoundEngine Sound { get; set; } = null!;
     

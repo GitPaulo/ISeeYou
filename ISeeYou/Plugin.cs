@@ -16,6 +16,7 @@ public sealed class Plugin : IDalamudPlugin
     private const string Name = "ISeeYou";
     private const string CommandName = "/icu";
     private const string CommandNameClear = "/icuc";
+    private const string CommandNameMe = "/icume";
 
     private TargetContextMenu targetContextMenu = null!;
     private readonly WindowSystem windowSystem = new(Name);
@@ -40,9 +41,11 @@ public sealed class Plugin : IDalamudPlugin
     {
         Shared.ConfigWindow = new ConfigWindow();
         Shared.HistoryWindow = new HistoryWindow();
+        Shared.MeWindow = new RecentTargetsWindow();
 
         windowSystem.AddWindow(Shared.ConfigWindow);
         windowSystem.AddWindow(Shared.HistoryWindow);
+        windowSystem.AddWindow(Shared.MeWindow);
     }
 
     private void InitContextMenu()
@@ -55,12 +58,17 @@ public sealed class Plugin : IDalamudPlugin
     {
         Shared.CommandManager.AddHandler(CommandName, new CommandInfo(OnCommand)
         {
-            HelpMessage = "Use /icu to print target history and use main window"
+            HelpMessage = "Use /icu to show the full target history for ALL targets"
         });
 
         Shared.CommandManager.AddHandler(CommandNameClear, new CommandInfo(OnCommandClear)
         {
-            HelpMessage = "Use /icuc to clear target history"
+            HelpMessage = "Use /icuc to clear ALL target history"
+        });
+        
+        Shared.CommandManager.AddHandler(CommandNameMe, new CommandInfo(OnCommandMe)
+        {
+            HelpMessage = "Use /icume to show just YOUR targets in a simple window"
         });
     }
 
@@ -100,6 +108,7 @@ public sealed class Plugin : IDalamudPlugin
 
         Shared.CommandManager.RemoveHandler(CommandName);
         Shared.CommandManager.RemoveHandler(CommandNameClear);
+        Shared.CommandManager.RemoveHandler(CommandNameMe);
 
         Shared.NamePlateGui.OnNamePlateUpdate -= NamePlateGui_OnNamePlateUpdate;
         Shared.ClientState.Login -= OnLogin;
@@ -124,6 +133,11 @@ public sealed class Plugin : IDalamudPlugin
             trackedPlayer.ClearTargetHistory();
             Shared.Chat.Print($"Cleared target history for {trackedPlayer.PlayerName} (ID: {playerId}).");
         }
+    }
+
+    private void OnCommandMe(string command, string args)
+    {
+        ToggleMeUI();
     }
 
     private void RegisterLocalPlayer()
@@ -185,4 +199,5 @@ public sealed class Plugin : IDalamudPlugin
     private void DrawUI() => windowSystem.Draw();
     public void ToggleConfigUI() => Shared.ConfigWindow.Toggle();
     public void ToggleHistoryUI() => Shared.HistoryWindow.Toggle();
+    public void ToggleMeUI() => Shared.MeWindow.Toggle();
 }
