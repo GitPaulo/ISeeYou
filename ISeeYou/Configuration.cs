@@ -11,6 +11,7 @@ public class Configuration : IPluginConfiguration
     
     public bool IsEnabledInCombat { get; set; } = true;
     public bool ShouldPlaySoundOnTarget { get; set; } = true;
+    public bool ShouldPlaySoundOnUntarget { get; set; } = true;
     public bool ShouldLogToChat { get; set; } = true;
     public Vector4 LocalPlayerColor { get; set; } = new(1, 1, 1, 1);
     

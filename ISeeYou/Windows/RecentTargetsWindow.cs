@@ -8,9 +8,9 @@ namespace ISeeYou.Windows
 {
     public class RecentTargetsWindow : Window, IDisposable
     {
-        private ulong lastFocusedTarget = 0;
+        private ulong lastFocusedTarget;
 
-        public RecentTargetsWindow() : base("ISeeYOUR Targets###RecentTargets")
+        public RecentTargetsWindow() : base("ISeeYou Me ###RecentTargets")
         {
             Flags = ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoScrollWithMouse;
             Size = new Vector2(250, 300);
@@ -29,30 +29,33 @@ namespace ISeeYou.Windows
 
             var localPlayerEntry = Shared.TargetManager.GetAllHistories()
                                          .FirstOrDefault(h => h.PlayerId == localPlayer.GameObjectId);
-
-            if (localPlayerEntry.History == null || !localPlayerEntry.History.TargetHistory.Any())
+            var hasTargets = (localPlayerEntry.History != null && localPlayerEntry.History.TargetHistory.Any());
+            var currentlyTargetedPlayers = localPlayerEntry.History.CurrentTargetingPlayers
+                                                           .Select(p => p.GameObjectId)
+                                                           .ToHashSet();
+            if (!hasTargets)
             {
                 ImGui.Text("No recent targets.");
                 return;
             }
 
-            var currentlyTargetedPlayers = localPlayerEntry.History.CurrentTargetingPlayers
-                                                           .Select(p => p.GameObjectId)
-                                                           .ToHashSet();
+            // Filter history to only keep the latest entry per player
+            var uniqueTargets = localPlayerEntry.History.TargetHistory
+                                                .GroupBy(entry => entry.Name) // Group by player name
+                                                .Select(group => group.OrderByDescending(e => e.Timestamp)
+                                                                      .First()) // Get latest entry
+                                                .ToList();
 
             ImGui.BeginChild("RecentTargetsList", new Vector2(0, 0), true);
             bool anyHovered = false; // Track if any item is hovered
 
-            foreach (var (gameObjectId, name, timestamp) in localPlayerEntry.History.TargetHistory)
+            foreach (var (gameObjectId, name, timestamp) in uniqueTargets)
             {
                 bool isCurrentTarget = currentlyTargetedPlayers.Contains(gameObjectId);
-                bool isHovered = ImGui.IsItemHovered();
 
                 Vector4 textColor = isCurrentTarget
-                                        ? new Vector4(0.0f, 0.8f, 1.0f, 1.0f) // Light blue for current target
-                                        : isHovered
-                                            ? new Vector4(1.0f, 1.0f, 1.0f, 1.0f)  // Bright white on hover
-                                            : new Vector4(0.6f, 0.6f, 0.6f, 1.0f); // Default faded grey
+                                        ? new Vector4(0.0f, 0.8f, 1.0f, 1.0f)  // Light blue for current target
+                                        : new Vector4(0.6f, 0.6f, 0.6f, 1.0f); // Default faded grey
 
                 ImGui.PushStyleColor(ImGuiCol.Text, textColor);
 
@@ -61,6 +64,7 @@ namespace ISeeYou.Windows
                     TargetPlayer(gameObjectId);
                 }
 
+                bool isHovered = ImGui.IsItemHovered();
                 ImGui.PopStyleColor();
 
                 if (isHovered)

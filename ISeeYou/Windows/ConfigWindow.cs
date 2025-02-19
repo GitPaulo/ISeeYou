@@ -32,6 +32,14 @@ public class ConfigWindow : Window, IDisposable
             Shared.Config.ShouldPlaySoundOnTarget = shouldPlaySoundOnTarget;
             Shared.Config.Save();
         }
+        
+        // Should play sound on untarget
+        var shouldPlaySoundOnUntarget = Shared.Config.ShouldPlaySoundOnTarget;
+        if (ImGui.Checkbox("Play sound on untarget", ref shouldPlaySoundOnUntarget))
+        {
+            Shared.Config.ShouldPlaySoundOnUntarget = shouldPlaySoundOnUntarget;
+            Shared.Config.Save();
+        }
 
         // Should log to chat
         var shouldLogToChat = Shared.Config.ShouldLogToChat;

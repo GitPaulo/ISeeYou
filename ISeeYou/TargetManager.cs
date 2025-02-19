@@ -38,29 +38,31 @@ public class TargetManager : IDisposable
             return;
 
         updateTimer.Restart();
-        
+
         if (Util.IsLocalPlayerInCombat() && !Shared.Config.IsEnabledInCombat)
             return;
-        
+
         UpdateAllTrackedPlayers();
     }
 
     public void RegisterPlayer(ulong playerId, string playerName, Vector4? colorOverride = null)
     {
-        if (!trackedPlayers.ContainsKey(playerId))
+        if (trackedPlayers.ContainsKey(playerId))
         {
-            trackedPlayers[playerId] = new TrackedPlayer(playerId, playerName);
+            Shared.Chat.Print($"Player {playerName} (ID: {playerId}) is already being tracked.");
+            return;
+        }
 
-            // Use the provided color override or generate a bright color
-            playerColors[playerId] = colorOverride ?? GenerateBrightColor();
+        trackedPlayers[playerId] = new TrackedPlayer(playerId, playerName);
+        // Use the provided color override or generate a bright color
+        playerColors[playerId] = colorOverride ?? GenerateBrightColor();
 
-            Shared.Log.Debug($"Registered player {playerName} (ID: {playerId}) with color {playerColors[playerId]}.");
+        Shared.Log.Debug($"Registered player {playerName} (ID: {playerId}) with color {playerColors[playerId]}.");
 
-            if (Shared.Config.ShouldLogToChat)
-            {
-                Shared.Chat.Print(
-                    $"Registered player {playerName} (ID: {playerId}) with color {playerColors[playerId]}.");
-            }
+        if (Shared.Config.ShouldLogToChat)
+        {
+            Shared.Chat.Print(
+                $"Registered player {playerName} (ID: {playerId}) with color {playerColors[playerId]}.");
         }
     }
 
@@ -182,7 +184,7 @@ public class TargetManager : IDisposable
             // Log players who have stopped targeting
             foreach (var player in stoppedTargeting)
             {
-                if (Shared.Config.ShouldPlaySoundOnTarget)
+                if (Shared.Config.ShouldPlaySoundOnUntarget)
                 {
                     Shared.Sound.PlaySound(Shared.SoundTargetStopPath);
                 }
