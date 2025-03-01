@@ -18,7 +18,7 @@ public class ConfigWindow : Window, IDisposable
     public override void Draw()
     {
         // Is enabled in Combat
-        var isEnabledInCombat = Shared.Config.ShouldPlaySoundOnTarget;
+        var isEnabledInCombat = Shared.Config.IsEnabledInCombat;
         if (ImGui.Checkbox("Enabled in combat", ref isEnabledInCombat))
         {
             Shared.Config.ShouldPlaySoundOnTarget = isEnabledInCombat;
