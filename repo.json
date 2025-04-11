@@ -4,7 +4,7 @@
         "Name": "ISeeYou",
         "Description": "Allows you to keep track of who is targeting you in a more visual way.",
         "InternalName": "ISeeYou",
-        "AssemblyVersion": "1.0.0",
+        "AssemblyVersion": "2.0.0",
         "RepoUrl": "https://github.com/GitPaulo/ISeeYou",
         "IconUrl": "https://raw.githubusercontent.com/GitPaulo/ISeeYou/master/Data/icon.png",
         "ApplicableVersion": "any",
