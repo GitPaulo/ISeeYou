@@ -94,6 +94,12 @@ public sealed class Plugin : IDalamudPlugin
         Shared.ClientState.Login += OnLogin;
 
         Shared.NamePlateGui.OnNamePlateUpdate += NamePlateGui_OnNamePlateUpdate;
+        
+        // Support plugin reload, re-register local player
+        if (Shared.ClientState.IsLoggedIn)
+        {
+            Shared.Framework.RunOnTick(RegisterLocalPlayer);
+        }
     }
 
     public void Dispose()
@@ -114,10 +120,7 @@ public sealed class Plugin : IDalamudPlugin
 
     private void OnLogin()
     {
-        if (Shared.ClientState.IsLoggedIn)
-        {
-            Shared.Framework.RunOnTick(RegisterLocalPlayer);
-        }
+        RegisterLocalPlayer();
     }
 
     private void OnCommand(string command, string args)
