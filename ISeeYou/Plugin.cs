@@ -84,8 +84,6 @@ public sealed class Plugin : IDalamudPlugin
     {
         Shared.TargetManager = new TargetManager();
         Shared.Sound = new SoundEngine();
-
-        RegisterLocalPlayer();
     }
 
     private void InitHooks()
@@ -116,7 +114,10 @@ public sealed class Plugin : IDalamudPlugin
 
     private void OnLogin()
     {
-        RegisterLocalPlayer();
+        if (Shared.ClientState.IsLoggedIn)
+        {
+            Shared.Framework.RunOnTick(RegisterLocalPlayer);
+        }
     }
 
     private void OnCommand(string command, string args)
