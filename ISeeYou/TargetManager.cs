@@ -1,19 +1,18 @@
-﻿using System.Numerics;
-
-namespace ISeeYou;
-
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Numerics;
 using Dalamud.Game.ClientState.Objects.SubKinds;
 using Dalamud.Game.ClientState.Objects.Types;
 using Dalamud.Plugin.Services;
 
+namespace ISeeYou;
+
 public class TargetManager : IDisposable
 {
-    private readonly Dictionary<ulong, TrackedPlayer> trackedPlayers = new();
     private readonly Dictionary<ulong, Vector4> playerColors = new();
+    private readonly Dictionary<ulong, TrackedPlayer> trackedPlayers = new();
     private readonly Stopwatch updateTimer = new();
 
     public TargetManager()
@@ -74,9 +73,7 @@ public class TargetManager : IDisposable
             Shared.Log.Debug($"Unregistered player (ID: {playerId}) from tracking.");
 
             if (Shared.Config.ShouldLogToChat)
-            {
                 Shared.Chat.Print($"Unregistered player (ID: {playerId}) from tracking.");
-            }
         }
     }
 
@@ -89,16 +86,20 @@ public class TargetManager : IDisposable
         }
     }
 
-    public IReadOnlyDictionary<ulong, Vector4> GetPlayerColors() => playerColors; // Expose colors publicly
+    public IReadOnlyDictionary<ulong, Vector4> GetPlayerColors()
+    {
+        return playerColors;
+        // Expose colors publicly
+    }
 
     private Vector4 GenerateBrightColor()
     {
         // Generate a random bright color
         var random = new Random();
-        float r = random.Next(128, 256) / 255f; // Scale to 0.0 - 1.0 for Vector4
-        float g = random.Next(128, 256) / 255f;
-        float b = random.Next(128, 256) / 255f;
-        float a = 1.0f; // Full opacity
+        var r = random.Next(128, 256) / 255f; // Scale to 0.0 - 1.0 for Vector4
+        var g = random.Next(128, 256) / 255f;
+        var b = random.Next(128, 256) / 255f;
+        var a = 1.0f; // Full opacity
 
         return new Vector4(r, g, b, a);
     }
@@ -111,14 +112,21 @@ public class TargetManager : IDisposable
     private void UpdateAllTrackedPlayers()
     {
         var objects = Shared.ObjectTable.ToArray();
-        foreach (var player in trackedPlayers.Values)
-        {
-            player.Update(objects);
-        }
+        foreach (var player in trackedPlayers.Values) player.Update(objects);
+    }
+
+
+    public void ForceSoftRefresh()
+    {
+        Shared.NamePlateGui.RequestRedraw();
     }
 
     public class TrackedPlayer(ulong playerId, string playerName)
     {
+        private readonly List<(ulong GameObjectId, string Name, DateTime Timestamp)> targetHistory = new();
+
+        private IPlayerCharacter[] currentTargetingPlayers = Array.Empty<IPlayerCharacter>();
+        private IPlayerCharacter[] previousTargetingPlayers = Array.Empty<IPlayerCharacter>(); // Track previous state
         public ulong PlayerId { get; } = playerId;
         public string PlayerName { get; } = playerName;
 
@@ -126,10 +134,6 @@ public class TargetManager : IDisposable
 
         public IReadOnlyCollection<(ulong GameObjectId, string Name, DateTime Timestamp)> TargetHistory =>
             targetHistory;
-
-        private IPlayerCharacter[] currentTargetingPlayers = Array.Empty<IPlayerCharacter>();
-        private IPlayerCharacter[] previousTargetingPlayers = Array.Empty<IPlayerCharacter>(); // Track previous state
-        private readonly List<(ulong GameObjectId, string Name, DateTime Timestamp)> targetHistory = new();
 
         public void Update(IEnumerable<IGameObject> objects)
         {
@@ -168,10 +172,7 @@ public class TargetManager : IDisposable
             {
                 targetHistory.Insert(0, (player.GameObjectId, player.Name.TextValue, DateTime.Now));
 
-                if (Shared.Config.ShouldPlaySoundOnTarget)
-                {
-                    Shared.Sound.PlaySound(Shared.SoundTargetStartPath);
-                }
+                if (Shared.Config.ShouldPlaySoundOnTarget) Shared.Sound.PlaySound(Shared.SoundTargetStartPath);
 
                 if (Shared.Config.ShouldLogToChat)
                 {
@@ -179,15 +180,14 @@ public class TargetManager : IDisposable
                         (playerId == Shared.ClientState.LocalPlayer!.GameObjectId ? "YOU" : playerName)
                     } at {DateTime.Now:HH:mm}.");
                 }
+
+                Shared.TargetManager.ForceSoftRefresh();
             }
 
             // Log players who have stopped targeting
             foreach (var player in stoppedTargeting)
             {
-                if (Shared.Config.ShouldPlaySoundOnUntarget)
-                {
-                    Shared.Sound.PlaySound(Shared.SoundTargetStopPath);
-                }
+                if (Shared.Config.ShouldPlaySoundOnUntarget) Shared.Sound.PlaySound(Shared.SoundTargetStopPath);
 
                 // chat print stopped and started targeting
                 Shared.Log.Debug($"Stopped Targeting: {player.Name.TextValue} - {player.GameObjectId}");
@@ -197,13 +197,13 @@ public class TargetManager : IDisposable
                         (playerId == Shared.ClientState.LocalPlayer!.GameObjectId ? "YOU" : playerName)
                     } at {DateTime.Now:HH:mm}.");
                 }
+
+                Shared.TargetManager.ForceSoftRefresh();
             }
 
             // Maintain history size
             while (targetHistory.Count > Shared.Config.MaxHistoryEntries)
-            {
                 targetHistory.RemoveAt(targetHistory.Count - 1);
-            }
         }
 
         public void ClearTargetHistory()

@@ -2,8 +2,8 @@
 using System.IO;
 using Dalamud.Game.Command;
 using Dalamud.Game.Gui.NamePlate;
-using Dalamud.Plugin;
 using Dalamud.Interface.Windowing;
+using Dalamud.Plugin;
 using ImGuiNET;
 using ISeeYou.ContextMenus;
 using ISeeYou.Sound;
@@ -17,9 +17,9 @@ public sealed class Plugin : IDalamudPlugin
     private const string CommandName = "/icu";
     private const string CommandNameClear = "/icuc";
     private const string CommandNameMe = "/icume";
+    private readonly WindowSystem windowSystem = new(Name);
 
     private TargetContextMenu targetContextMenu = null!;
-    private readonly WindowSystem windowSystem = new(Name);
 
     public Plugin(IDalamudPluginInterface pluginInterface)
     {
@@ -35,6 +35,22 @@ public sealed class Plugin : IDalamudPlugin
         InitHooks();
 
         Shared.Log.Information($"Loaded {Shared.PluginInterface.Manifest.Name}");
+    }
+
+    public void Dispose()
+    {
+        windowSystem.RemoveAllWindows();
+        targetContextMenu.Disable();
+
+        Shared.ConfigWindow.Dispose();
+        Shared.TargetManager.Dispose();
+
+        Shared.CommandManager.RemoveHandler(CommandName);
+        Shared.CommandManager.RemoveHandler(CommandNameClear);
+        Shared.CommandManager.RemoveHandler(CommandNameMe);
+
+        Shared.NamePlateGui.OnNamePlateUpdate -= NamePlateGui_OnNamePlateUpdate;
+        Shared.ClientState.Login -= OnLogin;
     }
 
     private void InitWindows()
@@ -65,7 +81,7 @@ public sealed class Plugin : IDalamudPlugin
         {
             HelpMessage = "Use /icuc to clear ALL target history"
         });
-        
+
         Shared.CommandManager.AddHandler(CommandNameMe, new CommandInfo(OnCommandMe)
         {
             HelpMessage = "Use /icume to show just YOUR targets in a simple window"
@@ -94,28 +110,9 @@ public sealed class Plugin : IDalamudPlugin
         Shared.ClientState.Login += OnLogin;
 
         Shared.NamePlateGui.OnNamePlateUpdate += NamePlateGui_OnNamePlateUpdate;
-        
+
         // Support plugin reload, re-register local player
-        if (Shared.ClientState.IsLoggedIn)
-        {
-            Shared.Framework.RunOnTick(RegisterLocalPlayer);
-        }
-    }
-
-    public void Dispose()
-    {
-        windowSystem.RemoveAllWindows();
-        targetContextMenu.Disable();
-
-        Shared.ConfigWindow.Dispose();
-        Shared.TargetManager.Dispose();
-
-        Shared.CommandManager.RemoveHandler(CommandName);
-        Shared.CommandManager.RemoveHandler(CommandNameClear);
-        Shared.CommandManager.RemoveHandler(CommandNameMe);
-
-        Shared.NamePlateGui.OnNamePlateUpdate -= NamePlateGui_OnNamePlateUpdate;
-        Shared.ClientState.Login -= OnLogin;
+        if (Shared.ClientState.IsLoggedIn) Shared.Framework.RunOnTick(RegisterLocalPlayer);
     }
 
     private void OnLogin()
@@ -168,12 +165,8 @@ public sealed class Plugin : IDalamudPlugin
         // Create a mapping of targeting players to registered players
         var targetingToRegisteredMap = new Dictionary<ulong, ulong>();
         foreach (var (registeredPlayerId, trackedPlayer) in trackedPlayers)
-        {
-            foreach (var targetingPlayer in trackedPlayer.CurrentTargetingPlayers)
-            {
-                targetingToRegisteredMap.TryAdd(targetingPlayer.GameObjectId, registeredPlayerId);
-            }
-        }
+        foreach (var targetingPlayer in trackedPlayer.CurrentTargetingPlayers)
+            targetingToRegisteredMap.TryAdd(targetingPlayer.GameObjectId, registeredPlayerId);
 
         foreach (var handler in handlers)
         {
@@ -200,8 +193,23 @@ public sealed class Plugin : IDalamudPlugin
         }
     }
 
-    private void DrawUI() => windowSystem.Draw();
-    public void ToggleConfigUI() => Shared.ConfigWindow.Toggle();
-    public void ToggleHistoryUI() => Shared.HistoryWindow.Toggle();
-    public void ToggleMeUI() => Shared.MeWindow.Toggle();
+    private void DrawUI()
+    {
+        windowSystem.Draw();
+    }
+
+    public void ToggleConfigUI()
+    {
+        Shared.ConfigWindow.Toggle();
+    }
+
+    public void ToggleHistoryUI()
+    {
+        Shared.HistoryWindow.Toggle();
+    }
+
+    public void ToggleMeUI()
+    {
+        Shared.MeWindow.Toggle();
+    }
 }

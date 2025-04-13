@@ -1,116 +1,112 @@
 ﻿using System.Collections.Generic;
 using Dalamud.Game.Gui.ContextMenu;
 
-namespace ISeeYou.ContextMenus
+namespace ISeeYou.ContextMenus;
+
+public class TargetContextMenu
 {
-    public class TargetContextMenu
+    private readonly MenuItem registerPlayerMenuItem;
+    private readonly MenuItem trackTargetingParentMenuItem;
+    private readonly MenuItem unregisterPlayerMenuItem;
+    private string? targetFullName;
+    private ulong? targetObjectId;
+
+    public TargetContextMenu()
     {
-        private readonly MenuItem registerPlayerMenuItem;
-        private readonly MenuItem unregisterPlayerMenuItem;
-        private readonly MenuItem trackTargetingParentMenuItem;
-        private string? targetFullName;
-        private ulong? targetObjectId;
-
-        public TargetContextMenu()
+        registerPlayerMenuItem = new MenuItem
         {
-            registerPlayerMenuItem = new MenuItem
-            {
-                Name = "Register Player",
-                OnClicked = OnRegisterPlayerClicked
-            };
+            Name = "Register Target",
+            OnClicked = OnRegisterPlayerClicked
+        };
 
-            unregisterPlayerMenuItem = new MenuItem
-            {
-                Name = "Unregister Player",
-                OnClicked = OnUnregisterPlayerClicked
-            };
+        unregisterPlayerMenuItem = new MenuItem
+        {
+            Name = "Unregister Target",
+            OnClicked = OnUnregisterPlayerClicked
+        };
 
-            trackTargetingParentMenuItem = new MenuItem
-            {
-                Name = "Track Targeting",
-                PrefixChar = 'T',
-                IsSubmenu = true,
-                OnClicked = OpenTrackTargetingSubmenu
-            };
+        trackTargetingParentMenuItem = new MenuItem
+        {
+            Name = "Targets",
+            PrefixChar = 'T',
+            IsSubmenu = true,
+            OnClicked = OpenTrackTargetingSubmenu
+        };
+    }
+
+    public void Enable()
+    {
+        Shared.ContextMenu.OnMenuOpened += OnContextMenuOpened;
+    }
+
+    public void Disable()
+    {
+        Shared.ContextMenu.OnMenuOpened -= OnContextMenuOpened;
+    }
+
+    private static bool IsMenuValid(IMenuArgs menuOpenedArgs)
+    {
+        if (menuOpenedArgs.Target is not MenuTargetDefault menuTargetDefault) return false;
+
+        switch (menuOpenedArgs.AddonName)
+        {
+            case null: // Nameplate/Model menu
+            case "LookingForGroup":
+            case "PartyMemberList":
+            case "FriendList":
+            case "FreeCompany":
+            case "SocialList":
+            case "ContactList":
+            case "ChatLog":
+            case "_PartyList":
+            case "LinkShell":
+            case "CrossWorldLinkshell":
+            case "ContentMemberList": // Eureka/Bozja/...
+            case "BeginnerChatList":
+                return menuTargetDefault.TargetName != string.Empty &&
+                       Util.IsWorldValid(menuTargetDefault.TargetHomeWorld.RowId);
+
+            case "BlackList":
+            case "MuteList":
+                return menuTargetDefault.TargetName != string.Empty;
         }
 
-        public void Enable()
-        {
-            Shared.ContextMenu.OnMenuOpened += OnContextMenuOpened;
-        }
+        return false;
+    }
 
-        public void Disable()
-        {
-            Shared.ContextMenu.OnMenuOpened -= OnContextMenuOpened;
-        }
+    private void OnContextMenuOpened(IMenuOpenedArgs menuArgs)
+    {
+        if (menuArgs.Target is not MenuTargetDefault menuTargetDefault || !IsMenuValid(menuArgs))
+            return;
 
-        private static bool IsMenuValid(IMenuArgs menuOpenedArgs)
-        {
-            if (menuOpenedArgs.Target is not MenuTargetDefault menuTargetDefault)
-            {
-                return false;
-            }
-            
-            switch (menuOpenedArgs.AddonName)
-            {
-                case null: // Nameplate/Model menu
-                case "LookingForGroup":
-                case "PartyMemberList":
-                case "FriendList":
-                case "FreeCompany":
-                case "SocialList":
-                case "ContactList":
-                case "ChatLog":
-                case "_PartyList":
-                case "LinkShell":
-                case "CrossWorldLinkshell":
-                case "ContentMemberList": // Eureka/Bozja/...
-                case "BeginnerChatList":
-                    return menuTargetDefault.TargetName != string.Empty &&
-                           Util.IsWorldValid(menuTargetDefault.TargetHomeWorld.RowId);
+        targetFullName = menuTargetDefault.TargetName;
+        targetObjectId = menuTargetDefault.TargetObjectId;
 
-                case "BlackList":
-                case "MuteList":
-                    return menuTargetDefault.TargetName != string.Empty;
-            }
+        menuArgs.AddMenuItem(trackTargetingParentMenuItem);
+    }
 
-            return false;
-        }
+    private void OnRegisterPlayerClicked(IMenuItemClickedArgs args)
+    {
+        if (string.IsNullOrEmpty(targetFullName) || targetObjectId == null)
+            return;
 
-        private void OnContextMenuOpened(IMenuOpenedArgs menuArgs)
-        {
-            if (menuArgs.Target is not MenuTargetDefault menuTargetDefault || !IsMenuValid(menuArgs))
-                return;
+        Shared.TargetManager.RegisterPlayer((ulong)targetObjectId, targetFullName);
+    }
 
-            targetFullName = menuTargetDefault.TargetName;
-            targetObjectId = menuTargetDefault.TargetObjectId;
+    private void OnUnregisterPlayerClicked(IMenuItemClickedArgs args)
+    {
+        if (string.IsNullOrEmpty(targetFullName) || targetObjectId == null)
+            return;
 
-            menuArgs.AddMenuItem(trackTargetingParentMenuItem);
-        }
+        Shared.TargetManager.UnregisterPlayer((ulong)targetObjectId);
+    }
 
-        private void OnRegisterPlayerClicked(IMenuItemClickedArgs args)
-        {
-            if (string.IsNullOrEmpty(targetFullName) || targetObjectId == null)
-                return;
+    private void OpenTrackTargetingSubmenu(IMenuItemClickedArgs args)
+    {
+        var submenuItems = new List<MenuItem>();
+        submenuItems.Add(registerPlayerMenuItem);
+        submenuItems.Add(unregisterPlayerMenuItem);
 
-            Shared.TargetManager.RegisterPlayer((ulong)targetObjectId, targetFullName);
-        }
-
-        private void OnUnregisterPlayerClicked(IMenuItemClickedArgs args)
-        {
-            if (string.IsNullOrEmpty(targetFullName) || targetObjectId == null)
-                return;
-
-            Shared.TargetManager.UnregisterPlayer((ulong)targetObjectId);
-        }
-
-        private void OpenTrackTargetingSubmenu(IMenuItemClickedArgs args)
-        {
-            var submenuItems = new List<MenuItem>();
-            submenuItems.Add(registerPlayerMenuItem);
-            submenuItems.Add(unregisterPlayerMenuItem);
-
-            args.OpenSubmenu(submenuItems);
-        }
+        args.OpenSubmenu(submenuItems);
     }
 }

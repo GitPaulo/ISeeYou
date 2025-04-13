@@ -24,7 +24,7 @@ public class ConfigWindow : Window, IDisposable
             Shared.Config.ShouldPlaySoundOnTarget = isEnabledInCombat;
             Shared.Config.Save();
         }
-        
+
         // Should play sound on target
         var shouldPlaySoundOnTarget = Shared.Config.ShouldPlaySoundOnTarget;
         if (ImGui.Checkbox("Play sound on target", ref shouldPlaySoundOnTarget))
@@ -32,7 +32,7 @@ public class ConfigWindow : Window, IDisposable
             Shared.Config.ShouldPlaySoundOnTarget = shouldPlaySoundOnTarget;
             Shared.Config.Save();
         }
-        
+
         // Should play sound on untarget
         var shouldPlaySoundOnUntarget = Shared.Config.ShouldPlaySoundOnTarget;
         if (ImGui.Checkbox("Play sound on untarget", ref shouldPlaySoundOnUntarget))

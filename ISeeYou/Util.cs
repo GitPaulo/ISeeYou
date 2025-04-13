@@ -1,6 +1,6 @@
 ﻿using System.Linq;
-using Lumina.Excel.Sheets;
 using Dalamud.Game.ClientState.Objects.Enums;
+using Lumina.Excel.Sheets;
 
 namespace ISeeYou;
 
@@ -19,10 +19,7 @@ public static class Util
 
     public static bool IsWorldValid(World world)
     {
-        if (world.Name.IsEmpty || GetRegionCode(world) == string.Empty)
-        {
-            return false;
-        }
+        if (world.Name.IsEmpty || GetRegionCode(world) == string.Empty) return false;
 
         return char.IsUpper(world.Name.ToString()[0]);
     }
@@ -30,10 +27,7 @@ public static class Util
     public static World GetWorld(uint worldId)
     {
         var worldSheet = Shared.DataManager.GetExcelSheet<World>();
-        if (!worldSheet.TryGetRow(worldId, out var world))
-        {
-            return worldSheet.First();
-        }
+        if (!worldSheet.TryGetRow(worldId, out var world)) return worldSheet.First();
 
         return world;
     }
@@ -46,7 +40,7 @@ public static class Util
             2 => "NA",
             3 => "EU",
             4 => "OC",
-            _ => string.Empty,
+            _ => string.Empty
         };
     }
 }
